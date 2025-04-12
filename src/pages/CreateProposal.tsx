@@ -1,10 +1,11 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import { format } from "date-fns";
 import { ProposalFormData, ServiceItem } from "@/types/proposal";
 import { createProposal, fetchProposalById, updateProposal } from "@/services/proposalService";
+import { usePDF } from "react-to-pdf";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import { useResponsive } from "@/hooks/use-responsive";
 import {
   Popover,
   PopoverContent,
@@ -24,6 +27,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { 
   CalendarIcon, 
   Download, 
@@ -33,9 +41,12 @@ import {
   Mail, 
   Calendar as CalendarIcon2, 
   Tag, 
-  X 
+  X,
+  Eye,
+  Menu
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import DraggableServiceList from "@/components/DraggableServiceList";
 import ProposalServiceRow from "@/components/ProposalServiceRow";
 import ProposalPreview from "@/components/ProposalPreview";
 
@@ -82,12 +93,26 @@ const emailTemplateOptions = [
 const CreateProposal = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { isMobile } = useResponsive();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState("standard");
   const [customTag, setCustomTag] = useState("");
   const [proposalDate, setProposalDate] = useState<Date | undefined>(new Date());
+  const [showPreview, setShowPreview] = useState(!isMobile);
+  const previewRef = useRef<HTMLDivElement>(null);
+
+  // PDF generation hook
+  const { toPDF, targetRef } = usePDF({
+    filename: 'proposal.pdf',
+    page: { 
+      margin: 20,
+      format: 'A4',
+      orientation: 'portrait'
+    }
+  });
 
   // Initialize form data
   const [formData, setFormData] = useState<ProposalFormData>({
@@ -99,6 +124,7 @@ const CreateProposal = () => {
     notes: "",
     tags: [],
     currency: "USD",
+    preferredTemplate: "standard"
   });
 
   // Load existing proposal if in edit mode
@@ -120,7 +146,12 @@ const CreateProposal = () => {
             notes: proposal.notes,
             tags: proposal.tags,
             currency: proposal.currency || "USD",
+            preferredTemplate: proposal.preferredTemplate || "standard"
           });
+          
+          if (proposal.preferredTemplate) {
+            setSelectedTemplate(proposal.preferredTemplate);
+          }
           
           if (proposal.createdAt) {
             setProposalDate(new Date(proposal.createdAt));
@@ -182,6 +213,14 @@ const CreateProposal = () => {
     }));
   };
 
+  // Handle reordering services with drag and drop
+  const handleServicesReorder = (reorderedServices: ServiceItem[]) => {
+    setFormData((prev) => ({
+      ...prev,
+      services: reorderedServices,
+    }));
+  };
+
   // Handle tag selection
   const handleTagSelect = (tag: string) => {
     if (formData.tags.includes(tag)) {
@@ -215,12 +254,33 @@ const CreateProposal = () => {
   // Handle sending email
   const handleSendEmail = () => {
     if (!formData.clientEmail) {
-      alert("Please enter a client email address");
+      toast({
+        title: "Email Required",
+        description: "Please enter a client email address",
+        variant: "destructive"
+      });
       return;
     }
     
-    alert(`Email would be sent to ${formData.clientEmail} using the ${selectedTemplate} template`);
+    // Save the selected template with the proposal
+    handleInputChange("preferredTemplate", selectedTemplate);
+    
+    toast({
+      title: "Email Sent",
+      description: `Proposal sent to ${formData.clientEmail} using the ${selectedTemplate} template`,
+      variant: "default"
+    });
     // In a real implementation, you would call an API to send the email
+  };
+
+  // Handle exporting PDF
+  const handleExportPDF = () => {
+    toPDF();
+    toast({
+      title: "PDF Generated",
+      description: "Your proposal has been exported as a PDF document",
+      variant: "default"
+    });
   };
 
   // Handle form submission
@@ -228,36 +288,56 @@ const CreateProposal = () => {
     e.preventDefault();
 
     if (!formData.clientName.trim()) {
-      // Show validation error
-      alert("Client name is required");
+      toast({
+        title: "Missing Information",
+        description: "Client name is required",
+        variant: "destructive"
+      });
       return;
     }
 
     if (!formData.clientEmail.trim()) {
-      // Show validation error
-      alert("Client email is required");
+      toast({
+        title: "Missing Information", 
+        description: "Client email is required",
+        variant: "destructive"
+      });
       return;
     }
 
     try {
       setSaving(true);
       
-      // Create a modified proposal data with the updated date
+      // Create a modified proposal data with the updated date and template preference
       const submissionData = {
         ...formData,
-        createdAt: proposalDate
+        createdAt: proposalDate,
+        preferredTemplate: selectedTemplate
       };
       
       if (isEdit && id) {
         await updateProposal(id, submissionData);
+        toast({
+          title: "Success",
+          description: "Proposal updated successfully"
+        });
       } else {
         await createProposal(submissionData);
+        toast({
+          title: "Success",
+          description: "New proposal created successfully"
+        });
       }
       
       // Navigate back to dashboard after successful save
       navigate("/dashboard");
     } catch (error) {
       console.error("Failed to save proposal:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save proposal. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setSaving(false);
     }
@@ -273,51 +353,148 @@ const CreateProposal = () => {
     }
   };
 
+  const currencySymbol = getCurrencySymbol(formData.currency);
+
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="bg-muted/30 py-4 px-4 border-b">
+      <header className="bg-muted/30 py-4 px-4 border-b sticky top-0 z-10">
         <div className="container max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
               <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Dashboard
+                <ArrowLeft className="sm:mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Back to Dashboard</span>
               </Button>
-              <h1 className="text-xl font-semibold">
+              <h1 className="text-xl font-semibold hidden sm:block">
                 {isEdit ? "Edit Proposal" : "Create New Proposal"}
               </h1>
             </div>
-            <div className="flex space-x-2">
-              <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Email Template" />
-                </SelectTrigger>
-                <SelectContent>
-                  {emailTemplateOptions.map(template => (
-                    <SelectItem key={template.value} value={template.value}>
-                      {template.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleSendEmail}
-                disabled={!formData.clientEmail}
-              >
-                <Mail className="mr-2 h-4 w-4" />
-                Send Email
-              </Button>
-              <Button variant="outline" size="sm" disabled={saving}>
-                <Download className="mr-2 h-4 w-4" />
-                Export PDF
-              </Button>
-              <Button type="submit" form="proposal-form" disabled={saving} className="ml-2">
-                <Save className="mr-2 h-4 w-4" />
-                {saving ? "Saving..." : isEdit ? "Update Proposal" : "Save Proposal"}
-              </Button>
-            </div>
+            
+            {/* Mobile menu button */}
+            {isMobile && (
+              <div className="flex items-center">
+                <h1 className="text-lg font-semibold mr-2">
+                  {isEdit ? "Edit Proposal" : "New Proposal"}
+                </h1>
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="icon">
+                      <Menu className="h-4 w-4" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right">
+                    <div className="py-4 flex flex-col space-y-4">
+                      <h3 className="text-lg font-medium">Actions</h3>
+                      <Separator />
+                      <div className="grid gap-4">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setShowPreview(true)}
+                          className="justify-start"
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          Preview
+                        </Button>
+                        
+                        <div className="space-y-2">
+                          <Label>Email Template</Label>
+                          <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Email Template" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {emailTemplateOptions.map(template => (
+                                <SelectItem key={template.value} value={template.value}>
+                                  {template.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={handleSendEmail}
+                          disabled={!formData.clientEmail}
+                          className="justify-start"
+                        >
+                          <Mail className="mr-2 h-4 w-4" />
+                          Send Email
+                        </Button>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={handleExportPDF}
+                          disabled={saving}
+                          className="justify-start"
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          Export PDF
+                        </Button>
+                        
+                        <Button 
+                          type="submit" 
+                          form="proposal-form" 
+                          disabled={saving}
+                          className="justify-start"
+                        >
+                          <Save className="mr-2 h-4 w-4" />
+                          {saving ? "Saving..." : isEdit ? "Update Proposal" : "Save Proposal"}
+                        </Button>
+                      </div>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
+            )}
+            
+            {/* Desktop actions */}
+            {!isMobile && (
+              <div className="flex space-x-2">
+                <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Email Template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {emailTemplateOptions.map(template => (
+                      <SelectItem key={template.value} value={template.value}>
+                        {template.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleSendEmail}
+                  disabled={!formData.clientEmail}
+                >
+                  <Mail className="mr-2 h-4 w-4" />
+                  Send Email
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleExportPDF}
+                  disabled={saving}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Export PDF
+                </Button>
+                <Button 
+                  type="submit" 
+                  form="proposal-form" 
+                  disabled={saving} 
+                  className="ml-2"
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {saving ? "Saving..." : isEdit ? "Update Proposal" : "Save Proposal"}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -329,12 +506,12 @@ const CreateProposal = () => {
       ) : (
         <div className="flex flex-col md:flex-row flex-1">
           {/* Form Panel */}
-          <div className="flex-1 overflow-auto border-r">
+          <div className={`flex-1 overflow-auto border-r ${showPreview && isMobile ? 'hidden' : 'block'}`}>
             <div className="container max-w-2xl mx-auto py-6 px-4">
               <form id="proposal-form" onSubmit={handleSubmit} className="space-y-8">
                 {/* Client Information */}
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center flex-wrap gap-4">
                     <h2 className="text-lg font-semibold">Client Information</h2>
                     <div className="space-y-2">
                       <Label htmlFor="proposalDate">Proposal Date</Label>
@@ -395,7 +572,7 @@ const CreateProposal = () => {
 
                 {/* Services Section */}
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center flex-wrap gap-2">
                     <h2 className="text-lg font-semibold">Services & Pricing</h2>
                     <div className="flex space-x-2 items-center">
                       <Select 
@@ -444,25 +621,30 @@ const CreateProposal = () => {
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-1">
-                      <div className="grid grid-cols-12 gap-2 text-sm text-muted-foreground mb-2">
-                        <div className="col-span-5">Service</div>
-                        <div className="col-span-2">Unit Price</div>
-                        <div className="col-span-2">Quantity</div>
-                        <div className="col-span-2 text-right">Total</div>
-                        <div className="col-span-1"></div>
-                      </div>
-                      {formData.services.map((service) => (
-                        <ProposalServiceRow
-                          key={service.id}
-                          service={service}
-                          onChange={handleServiceChange}
-                          onDelete={() => handleServiceDelete(service.id)}
-                          currencySymbol={getCurrencySymbol(formData.currency)}
+                    <div>
+                      {isMobile ? (
+                        <div className="space-y-1">
+                          {formData.services.map((service) => (
+                            <ProposalServiceRow
+                              key={service.id}
+                              service={service}
+                              onChange={handleServiceChange}
+                              onDelete={() => handleServiceDelete(service.id)}
+                              currencySymbol={currencySymbol}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <DraggableServiceList
+                          services={formData.services}
+                          onServiceChange={handleServiceChange}
+                          onServiceDelete={handleServiceDelete}
+                          onServicesReorder={handleServicesReorder}
+                          currencySymbol={currencySymbol}
                         />
-                      ))}
+                      )}
                       <div className="text-right pt-2 font-semibold">
-                        Total: {getCurrencySymbol(formData.currency)}
+                        Total: {currencySymbol}
                         {formData.services
                           .reduce(
                             (sum, service) => sum + service.unitPrice * service.quantity,
@@ -635,15 +817,39 @@ const CreateProposal = () => {
             </div>
           </div>
 
-          {/* Preview Panel */}
-          <div className="flex-1 overflow-auto bg-muted/20">
-            <ProposalPreview 
-              proposal={{
-                ...formData,
-                createdAt: proposalDate
-              }} 
-            />
-          </div>
+          {/* Preview Panel - Responsive handling */}
+          {isMobile ? (
+            <div className={`flex-1 ${!showPreview ? 'hidden' : 'block'}`}>
+              <div className="sticky top-0 z-10 bg-background p-2 border-b flex justify-between items-center">
+                <h2 className="text-lg font-semibold">Proposal Preview</h2>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowPreview(false)}
+                >
+                  Edit
+                </Button>
+              </div>
+              <div ref={targetRef}>
+                <ProposalPreview 
+                  proposal={{
+                    ...formData,
+                    createdAt: proposalDate
+                  }} 
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-auto bg-muted/20" ref={targetRef}>
+              <ProposalPreview
+                ref={previewRef}
+                proposal={{
+                  ...formData,
+                  createdAt: proposalDate
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
 

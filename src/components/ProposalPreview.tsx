@@ -1,4 +1,5 @@
 
+import React, { forwardRef } from "react";
 import { Proposal, ServiceItem } from "@/types/proposal";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +9,7 @@ interface ProposalPreviewProps {
   proposal: Partial<Proposal>;
 }
 
-const ProposalPreview = ({ proposal }: ProposalPreviewProps) => {
+const ProposalPreview = forwardRef<HTMLDivElement, ProposalPreviewProps>(({ proposal }, ref) => {
   // Get currency symbol based on currency code
   const getCurrencySymbol = (currencyCode?: string) => {
     switch (currencyCode) {
@@ -37,7 +38,7 @@ const ProposalPreview = ({ proposal }: ProposalPreviewProps) => {
   };
   
   return (
-    <div className="h-full overflow-auto p-4 bg-muted/30">
+    <div ref={ref} className="h-full overflow-auto p-4 bg-muted/30">
       <Card className="shadow-md max-w-3xl mx-auto">
         <CardHeader className="pb-4 space-y-1">
           <div className="flex justify-between items-start">
@@ -151,6 +152,8 @@ const ProposalPreview = ({ proposal }: ProposalPreviewProps) => {
       </Card>
     </div>
   );
-};
+});
+
+ProposalPreview.displayName = "ProposalPreview";
 
 export default ProposalPreview;

@@ -18,6 +18,7 @@ export interface Proposal {
   createdAt: Date;
   status: 'created' | 'pending' | 'deleted';
   currency: string;
+  preferredTemplate?: string;
 }
 
 export interface ProposalFormData {
@@ -30,4 +31,5 @@ export interface ProposalFormData {
   tags: string[];
   currency: string;
   createdAt?: Date;
+  preferredTemplate?: string;
 }
