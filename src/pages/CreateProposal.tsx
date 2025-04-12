@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
@@ -6,7 +5,6 @@ import { format } from "date-fns";
 import { ProposalFormData, ServiceItem } from "@/types/proposal";
 import { createProposal, fetchProposalById, updateProposal } from "@/services/proposalService";
 import { usePDF } from "react-to-pdf";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,8 +47,8 @@ import { cn } from "@/lib/utils";
 import DraggableServiceList from "@/components/DraggableServiceList";
 import ProposalServiceRow from "@/components/ProposalServiceRow";
 import ProposalPreview from "@/components/ProposalPreview";
+import ThemeToggle from "@/components/ThemeToggle";
 
-// Predefined service options
 const serviceOptions = [
   "Web Development",
   "UI/UX Design",
@@ -62,7 +60,6 @@ const serviceOptions = [
   "Maintenance Services",
 ];
 
-// Predefined tag options
 const tagOptions = [
   "Web",
   "Design",
@@ -74,7 +71,6 @@ const tagOptions = [
   "Maintenance",
 ];
 
-// Currency options
 const currencyOptions = [
   { value: "USD", label: "$ (USD)" },
   { value: "EUR", label: "€ (EUR)" },
@@ -82,7 +78,6 @@ const currencyOptions = [
   { value: "GBP", label: "£ (GBP)" },
 ];
 
-// Email template options
 const emailTemplateOptions = [
   { value: "standard", label: "Standard Proposal" },
   { value: "detailed", label: "Detailed Breakdown" },
@@ -104,7 +99,6 @@ const CreateProposal = () => {
   const [showPreview, setShowPreview] = useState(!isMobile);
   const previewRef = useRef<HTMLDivElement>(null);
 
-  // PDF generation hook
   const { toPDF, targetRef } = usePDF({
     filename: 'proposal.pdf',
     page: { 
@@ -114,7 +108,6 @@ const CreateProposal = () => {
     }
   });
 
-  // Initialize form data
   const [formData, setFormData] = useState<ProposalFormData>({
     clientName: "",
     clientEmail: "",
@@ -127,7 +120,6 @@ const CreateProposal = () => {
     preferredTemplate: "standard"
   });
 
-  // Load existing proposal if in edit mode
   useEffect(() => {
     const loadProposal = async () => {
       if (!id) return;
@@ -159,7 +151,6 @@ const CreateProposal = () => {
           
           setIsEdit(true);
         } else {
-          // If proposal not found, redirect to create new
           navigate("/create", { replace: true });
         }
       } catch (error) {
@@ -172,7 +163,6 @@ const CreateProposal = () => {
     loadProposal();
   }, [id, navigate]);
 
-  // Handle form field changes
   const handleInputChange = (field: keyof ProposalFormData, value: any) => {
     setFormData((prev) => ({
       ...prev,
@@ -180,7 +170,6 @@ const CreateProposal = () => {
     }));
   };
 
-  // Handle adding a new service row
   const handleAddService = (optionName?: string) => {
     const newService: ServiceItem = {
       id: uuidv4(),
@@ -195,7 +184,6 @@ const CreateProposal = () => {
     }));
   };
 
-  // Handle updating a service
   const handleServiceChange = (updatedService: ServiceItem) => {
     setFormData((prev) => ({
       ...prev,
@@ -205,7 +193,6 @@ const CreateProposal = () => {
     }));
   };
 
-  // Handle removing a service
   const handleServiceDelete = (serviceId: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -213,7 +200,6 @@ const CreateProposal = () => {
     }));
   };
 
-  // Handle reordering services with drag and drop
   const handleServicesReorder = (reorderedServices: ServiceItem[]) => {
     setFormData((prev) => ({
       ...prev,
@@ -221,29 +207,24 @@ const CreateProposal = () => {
     }));
   };
 
-  // Handle tag selection
   const handleTagSelect = (tag: string) => {
     if (formData.tags.includes(tag)) {
-      // Remove tag if already selected
       handleInputChange(
         "tags",
         formData.tags.filter((t) => t !== tag)
       );
     } else {
-      // Add tag if not selected
       handleInputChange("tags", [...formData.tags, tag]);
     }
   };
-  
-  // Handle adding custom tag
+
   const handleAddCustomTag = () => {
     if (customTag.trim() && !formData.tags.includes(customTag.trim())) {
       handleInputChange("tags", [...formData.tags, customTag.trim()]);
       setCustomTag("");
     }
   };
-  
-  // Handle removing a tag
+
   const handleRemoveTag = (tag: string) => {
     handleInputChange(
       "tags",
@@ -251,7 +232,6 @@ const CreateProposal = () => {
     );
   };
 
-  // Handle sending email
   const handleSendEmail = () => {
     if (!formData.clientEmail) {
       toast({
@@ -262,7 +242,6 @@ const CreateProposal = () => {
       return;
     }
     
-    // Save the selected template with the proposal
     handleInputChange("preferredTemplate", selectedTemplate);
     
     toast({
@@ -270,12 +249,32 @@ const CreateProposal = () => {
       description: `Proposal sent to ${formData.clientEmail} using the ${selectedTemplate} template`,
       variant: "default"
     });
-    // In a real implementation, you would call an API to send the email
   };
 
-  // Handle exporting PDF
   const handleExportPDF = () => {
+    const tagsElements = document.querySelectorAll('.proposal-tag');
+    tagsElements.forEach(tag => {
+      (tag as HTMLElement).style.display = 'none';
+    });
+    
+    const emailElements = document.querySelectorAll('.client-email');
+    emailElements.forEach(email => {
+      if (email instanceof HTMLElement) {
+        const emailText = email.innerText;
+        if (emailText && !emailText.startsWith('mailto:')) {
+          email.innerHTML = `<a href="mailto:${emailText}">${emailText}</a>`;
+        }
+      }
+    });
+    
     toPDF();
+    
+    setTimeout(() => {
+      tagsElements.forEach(tag => {
+        (tag as HTMLElement).style.display = '';
+      });
+    }, 1000);
+    
     toast({
       title: "PDF Generated",
       description: "Your proposal has been exported as a PDF document",
@@ -283,7 +282,6 @@ const CreateProposal = () => {
     });
   };
 
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -308,7 +306,6 @@ const CreateProposal = () => {
     try {
       setSaving(true);
       
-      // Create a modified proposal data with the updated date and template preference
       const submissionData = {
         ...formData,
         createdAt: proposalDate,
@@ -329,7 +326,6 @@ const CreateProposal = () => {
         });
       }
       
-      // Navigate back to dashboard after successful save
       navigate("/dashboard");
     } catch (error) {
       console.error("Failed to save proposal:", error);
@@ -370,15 +366,15 @@ const CreateProposal = () => {
               </h1>
             </div>
             
-            {/* Mobile menu button */}
             {isMobile && (
               <div className="flex items-center">
                 <h1 className="text-lg font-semibold mr-2">
                   {isEdit ? "Edit Proposal" : "New Proposal"}
                 </h1>
+                <ThemeToggle />
                 <Sheet>
                   <SheetTrigger asChild>
-                    <Button variant="outline" size="icon">
+                    <Button variant="outline" size="icon" className="ml-2">
                       <Menu className="h-4 w-4" />
                     </Button>
                   </SheetTrigger>
@@ -451,9 +447,9 @@ const CreateProposal = () => {
               </div>
             )}
             
-            {/* Desktop actions */}
             {!isMobile && (
-              <div className="flex space-x-2">
+              <div className="flex space-x-2 items-center">
+                <ThemeToggle />
                 <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Email Template" />
@@ -505,11 +501,9 @@ const CreateProposal = () => {
         </div>
       ) : (
         <div className="flex flex-col md:flex-row flex-1">
-          {/* Form Panel */}
           <div className={`flex-1 overflow-auto border-r ${showPreview && isMobile ? 'hidden' : 'block'}`}>
             <div className="container max-w-2xl mx-auto py-6 px-4">
               <form id="proposal-form" onSubmit={handleSubmit} className="space-y-8">
-                {/* Client Information */}
                 <div className="space-y-4">
                   <div className="flex justify-between items-center flex-wrap gap-4">
                     <h2 className="text-lg font-semibold">Client Information</h2>
@@ -570,7 +564,6 @@ const CreateProposal = () => {
 
                 <Separator />
 
-                {/* Services Section */}
                 <div className="space-y-4">
                   <div className="flex justify-between items-center flex-wrap gap-2">
                     <h2 className="text-lg font-semibold">Services & Pricing</h2>
@@ -658,7 +651,6 @@ const CreateProposal = () => {
 
                 <Separator />
 
-                {/* Dates Section */}
                 <div className="space-y-4">
                   <h2 className="text-lg font-semibold">Timeline</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -725,7 +717,6 @@ const CreateProposal = () => {
 
                 <Separator />
 
-                {/* Tags Section */}
                 <div className="space-y-4">
                   <h2 className="text-lg font-semibold">Tags</h2>
                   <div className="mb-4">
@@ -753,14 +744,13 @@ const CreateProposal = () => {
                   </div>
                   
                   <div className="flex flex-wrap gap-2">
-                    {/* Selected tags at the top */}
                     {formData.tags.length > 0 && (
                       <div className="w-full mb-2 flex flex-wrap gap-2">
                         <div className="text-sm text-muted-foreground mr-2 pt-1">Selected:</div>
                         {formData.tags.map((tag) => (
                           <div 
                             key={tag} 
-                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary"
+                            className="proposal-tag inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary"
                           >
                             {tag}
                             <Button 
@@ -799,7 +789,6 @@ const CreateProposal = () => {
 
                 <Separator />
 
-                {/* Notes Section */}
                 <div className="space-y-4">
                   <h2 className="text-lg font-semibold">Notes</h2>
                   <div className="space-y-2">
@@ -817,7 +806,6 @@ const CreateProposal = () => {
             </div>
           </div>
 
-          {/* Preview Panel - Responsive handling */}
           {isMobile ? (
             <div className={`flex-1 ${!showPreview ? 'hidden' : 'block'}`}>
               <div className="sticky top-0 z-10 bg-background p-2 border-b flex justify-between items-center">
@@ -853,7 +841,6 @@ const CreateProposal = () => {
         </div>
       )}
 
-      {/* Contact Footer */}
       <footer className="bg-muted/30 py-4 px-4 border-t mt-auto">
         <div className="container mx-auto text-center text-sm text-muted-foreground">
           <p>For inquiries, contact us at: <a href="mailto:contact@proposalbuilder.com" className="text-primary hover:underline">contact@proposalbuilder.com</a></p>
