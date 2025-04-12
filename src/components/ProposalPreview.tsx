@@ -9,6 +9,17 @@ interface ProposalPreviewProps {
 }
 
 const ProposalPreview = ({ proposal }: ProposalPreviewProps) => {
+  // Get currency symbol based on currency code
+  const getCurrencySymbol = (currencyCode?: string) => {
+    switch (currencyCode) {
+      case "USD": return "$";
+      case "EUR": return "€";
+      case "INR": return "₹";
+      case "GBP": return "£";
+      default: return "$";
+    }
+  };
+  
   // Calculate the total for all services
   const calculateTotal = (services: ServiceItem[]) => {
     return services.reduce((total, service) => {
@@ -17,6 +28,7 @@ const ProposalPreview = ({ proposal }: ProposalPreviewProps) => {
   };
   
   const totalAmount = proposal.services?.length ? calculateTotal(proposal.services) : 0;
+  const currencySymbol = getCurrencySymbol(proposal.currency);
   
   // Format date to display or show placeholder
   const formatDate = (date: Date | null | undefined) => {
@@ -34,6 +46,12 @@ const ProposalPreview = ({ proposal }: ProposalPreviewProps) => {
               <CardTitle className="text-2xl font-bold text-primary">
                 {proposal.clientName || 'Client Name'}
               </CardTitle>
+              {proposal.clientEmail && (
+                <div className="text-sm mt-1">
+                  <span className="text-muted-foreground">Email: </span>
+                  {proposal.clientEmail}
+                </div>
+              )}
             </div>
             <div className="text-right">
               <div className="text-sm text-muted-foreground">DATE</div>
@@ -78,10 +96,10 @@ const ProposalPreview = ({ proposal }: ProposalPreviewProps) => {
                     {proposal.services.map((service, index) => (
                       <tr key={service.id} className={index % 2 === 0 ? 'bg-card' : 'bg-muted/50'}>
                         <td className="p-3 text-left">{service.name || 'Unnamed Service'}</td>
-                        <td className="p-3 text-right">${service.unitPrice.toFixed(2)}</td>
+                        <td className="p-3 text-right">{currencySymbol}{service.unitPrice.toFixed(2)}</td>
                         <td className="p-3 text-right">{service.quantity}</td>
                         <td className="p-3 text-right font-medium">
-                          ${(service.unitPrice * service.quantity).toFixed(2)}
+                          {currencySymbol}{(service.unitPrice * service.quantity).toFixed(2)}
                         </td>
                       </tr>
                     ))}
@@ -89,7 +107,7 @@ const ProposalPreview = ({ proposal }: ProposalPreviewProps) => {
                   <tfoot className="bg-primary/5 font-medium">
                     <tr>
                       <td colSpan={3} className="p-3 text-right">Total:</td>
-                      <td className="p-3 text-right font-bold">${totalAmount.toFixed(2)}</td>
+                      <td className="p-3 text-right font-bold">{currencySymbol}{totalAmount.toFixed(2)}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -124,6 +142,11 @@ const ProposalPreview = ({ proposal }: ProposalPreviewProps) => {
               </div>
             </div>
           )}
+          
+          {/* Contact Footer */}
+          <div className="mt-6 pt-4 border-t text-sm text-muted-foreground text-center">
+            <p>For inquiries, contact us at: <span className="text-primary">contact@proposalbuilder.com</span></p>
+          </div>
         </CardContent>
       </Card>
     </div>

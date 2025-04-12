@@ -5,7 +5,8 @@ import { Proposal } from "@/types/proposal";
 import { fetchProposals, deleteProposal } from "@/services/proposalService";
 import { Button } from "@/components/ui/button";
 import ProposalTable from "@/components/ProposalTable";
-import { PlusCircle, FileText, Mail } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { PlusCircle, FileText, Mail, Search, Tag } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -25,9 +26,12 @@ const emailTemplateOptions = [
 
 const Dashboard = () => {
   const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [filteredProposals, setFilteredProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProposal, setSelectedProposal] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState("standard");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchBy, setSearchBy] = useState<"name" | "tags">("name");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -36,6 +40,7 @@ const Dashboard = () => {
         setLoading(true);
         const data = await fetchProposals();
         setProposals(data);
+        setFilteredProposals(data);
       } catch (error) {
         console.error("Failed to load proposals:", error);
       } finally {
@@ -46,12 +51,32 @@ const Dashboard = () => {
     loadProposals();
   }, []);
 
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredProposals(proposals);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase();
+    const filtered = proposals.filter(proposal => {
+      if (searchBy === "name") {
+        return proposal.clientName.toLowerCase().includes(query);
+      } else if (searchBy === "tags") {
+        return proposal.tags.some(tag => tag.toLowerCase().includes(query));
+      }
+      return false;
+    });
+
+    setFilteredProposals(filtered);
+  }, [searchQuery, searchBy, proposals]);
+
   const handleDelete = async (id: string) => {
     try {
       await deleteProposal(id);
       // Update the list after deletion
       const updatedProposals = await fetchProposals();
       setProposals(updatedProposals);
+      setFilteredProposals(updatedProposals);
     } catch (error) {
       console.error("Failed to delete proposal:", error);
     }
@@ -122,33 +147,56 @@ const Dashboard = () => {
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-end space-x-4 mb-4">
-                  <Select 
-                    value={selectedTemplate} 
-                    onValueChange={setSelectedTemplate}
-                  >
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Email Template" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {emailTemplateOptions.map(template => (
-                        <SelectItem key={template.value} value={template.value}>
-                          {template.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button 
-                    variant="outline" 
-                    onClick={handleSendEmail}
-                    disabled={!selectedProposal}
-                  >
-                    <Mail className="mr-2 h-4 w-4" />
-                    Send Email
-                  </Button>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div className="relative col-span-2">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      className="pl-9 w-full"
+                      placeholder={`Search by ${searchBy === 'name' ? 'client name' : 'tags'}...`}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Select 
+                      value={searchBy} 
+                      onValueChange={(value: "name" | "tags") => setSearchBy(value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Search by" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="name">Client Name</SelectItem>
+                        <SelectItem value="tags">Tags</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select 
+                      value={selectedTemplate} 
+                      onValueChange={setSelectedTemplate}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Email Template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {emailTemplateOptions.map(template => (
+                          <SelectItem key={template.value} value={template.value}>
+                            {template.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      variant="outline" 
+                      onClick={handleSendEmail}
+                      disabled={!selectedProposal}
+                    >
+                      <Mail className="mr-2 h-4 w-4" />
+                      Send Email
+                    </Button>
+                  </div>
                 </div>
                 <ProposalTable 
-                  proposals={proposals} 
+                  proposals={filteredProposals} 
                   onDelete={handleDelete} 
                   onSelect={handleProposalSelect}
                   selectedProposalId={selectedProposal}

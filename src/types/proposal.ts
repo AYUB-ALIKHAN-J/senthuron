@@ -29,4 +29,5 @@ export interface ProposalFormData {
   notes: string;
   tags: string[];
   currency: string;
+  createdAt?: Date;
 }

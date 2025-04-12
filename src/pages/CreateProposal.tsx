@@ -24,7 +24,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarIcon, Download, Save, Plus, ArrowLeft, Mail } from "lucide-react";
+import { 
+  CalendarIcon, 
+  Download, 
+  Save, 
+  Plus, 
+  ArrowLeft, 
+  Mail, 
+  Calendar as CalendarIcon2, 
+  Tag, 
+  X 
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import ProposalServiceRow from "@/components/ProposalServiceRow";
 import ProposalPreview from "@/components/ProposalPreview";
@@ -76,6 +86,8 @@ const CreateProposal = () => {
   const [saving, setSaving] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState("standard");
+  const [customTag, setCustomTag] = useState("");
+  const [proposalDate, setProposalDate] = useState<Date | undefined>(new Date());
 
   // Initialize form data
   const [formData, setFormData] = useState<ProposalFormData>({
@@ -109,6 +121,11 @@ const CreateProposal = () => {
             tags: proposal.tags,
             currency: proposal.currency || "USD",
           });
+          
+          if (proposal.createdAt) {
+            setProposalDate(new Date(proposal.createdAt));
+          }
+          
           setIsEdit(true);
         } else {
           // If proposal not found, redirect to create new
@@ -178,6 +195,22 @@ const CreateProposal = () => {
       handleInputChange("tags", [...formData.tags, tag]);
     }
   };
+  
+  // Handle adding custom tag
+  const handleAddCustomTag = () => {
+    if (customTag.trim() && !formData.tags.includes(customTag.trim())) {
+      handleInputChange("tags", [...formData.tags, customTag.trim()]);
+      setCustomTag("");
+    }
+  };
+  
+  // Handle removing a tag
+  const handleRemoveTag = (tag: string) => {
+    handleInputChange(
+      "tags",
+      formData.tags.filter((t) => t !== tag)
+    );
+  };
 
   // Handle sending email
   const handleSendEmail = () => {
@@ -209,10 +242,16 @@ const CreateProposal = () => {
     try {
       setSaving(true);
       
+      // Create a modified proposal data with the updated date
+      const submissionData = {
+        ...formData,
+        createdAt: proposalDate
+      };
+      
       if (isEdit && id) {
-        await updateProposal(id, formData);
+        await updateProposal(id, submissionData);
       } else {
-        await createProposal(formData);
+        await createProposal(submissionData);
       }
       
       // Navigate back to dashboard after successful save
@@ -295,7 +334,38 @@ const CreateProposal = () => {
               <form id="proposal-form" onSubmit={handleSubmit} className="space-y-8">
                 {/* Client Information */}
                 <div className="space-y-4">
-                  <h2 className="text-lg font-semibold">Client Information</h2>
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-lg font-semibold">Client Information</h2>
+                    <div className="space-y-2">
+                      <Label htmlFor="proposalDate">Proposal Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !proposalDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon2 className="mr-2 h-4 w-4" />
+                            {proposalDate ? (
+                              format(proposalDate, "PPP")
+                            ) : (
+                              <span>Select proposal date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={proposalDate}
+                            onSelect={(date) => setProposalDate(date || new Date())}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="clientName">Client Name</Label>
@@ -476,7 +546,56 @@ const CreateProposal = () => {
                 {/* Tags Section */}
                 <div className="space-y-4">
                   <h2 className="text-lg font-semibold">Tags</h2>
+                  <div className="mb-4">
+                    <div className="flex space-x-2">
+                      <Input 
+                        placeholder="Add custom tag..."
+                        value={customTag}
+                        onChange={(e) => setCustomTag(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddCustomTag();
+                          }
+                        }}
+                      />
+                      <Button 
+                        type="button" 
+                        onClick={handleAddCustomTag}
+                        disabled={!customTag.trim()}
+                      >
+                        <Tag className="h-4 w-4 mr-2" />
+                        Add Tag
+                      </Button>
+                    </div>
+                  </div>
+                  
                   <div className="flex flex-wrap gap-2">
+                    {/* Selected tags at the top */}
+                    {formData.tags.length > 0 && (
+                      <div className="w-full mb-2 flex flex-wrap gap-2">
+                        <div className="text-sm text-muted-foreground mr-2 pt-1">Selected:</div>
+                        {formData.tags.map((tag) => (
+                          <div 
+                            key={tag} 
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary"
+                          >
+                            {tag}
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-4 w-4 text-primary hover:bg-primary/20"
+                              onClick={() => handleRemoveTag(tag)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <div className="text-sm text-muted-foreground mr-2 pt-1">Suggested:</div>
                     {tagOptions.map((tag) => (
                       <Button
                         key={tag}
@@ -518,7 +637,12 @@ const CreateProposal = () => {
 
           {/* Preview Panel */}
           <div className="flex-1 overflow-auto bg-muted/20">
-            <ProposalPreview proposal={formData} />
+            <ProposalPreview 
+              proposal={{
+                ...formData,
+                createdAt: proposalDate
+              }} 
+            />
           </div>
         </div>
       )}
