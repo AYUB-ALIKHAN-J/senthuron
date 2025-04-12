@@ -13,14 +13,16 @@ import {
 import { Button } from "@/components/ui/button";
 import StatusBadge from "./StatusBadge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, Eye } from "lucide-react";
+import { Trash2, Eye, Mail } from "lucide-react";
 
 interface ProposalTableProps {
   proposals: Proposal[];
   onDelete: (id: string) => void;
+  onSelect?: (id: string) => void;
+  selectedProposalId?: string | null;
 }
 
-const ProposalTable = ({ proposals, onDelete }: ProposalTableProps) => {
+const ProposalTable = ({ proposals, onDelete, onSelect, selectedProposalId }: ProposalTableProps) => {
   // Filter out deleted proposals for display
   const visibleProposals = proposals.filter(p => p.status !== 'deleted');
   
@@ -37,7 +39,9 @@ const ProposalTable = ({ proposals, onDelete }: ProposalTableProps) => {
       <Table>
         <TableHeader>
           <TableRow>
+            {onSelect && <TableHead className="w-[50px]"></TableHead>}
             <TableHead>Client Name</TableHead>
+            <TableHead>Email</TableHead>
             <TableHead>Created Date</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Services</TableHead>
@@ -46,8 +50,26 @@ const ProposalTable = ({ proposals, onDelete }: ProposalTableProps) => {
         </TableHeader>
         <TableBody>
           {visibleProposals.map((proposal) => (
-            <TableRow key={proposal.id}>
+            <TableRow 
+              key={proposal.id} 
+              className={selectedProposalId === proposal.id ? "bg-muted" : ""}
+              onClick={() => onSelect && onSelect(proposal.id)}
+            >
+              {onSelect && (
+                <TableCell>
+                  <div className="flex items-center justify-center">
+                    <div 
+                      className={`w-4 h-4 rounded-full ${
+                        selectedProposalId === proposal.id 
+                          ? "bg-primary" 
+                          : "border border-muted-foreground"
+                      }`}
+                    />
+                  </div>
+                </TableCell>
+              )}
               <TableCell className="font-medium">{proposal.clientName}</TableCell>
+              <TableCell>{proposal.clientEmail || "—"}</TableCell>
               <TableCell>{format(new Date(proposal.createdAt), 'MMM dd, yyyy')}</TableCell>
               <TableCell>
                 <StatusBadge status={proposal.status} />

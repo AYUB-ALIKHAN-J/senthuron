@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarIcon, Download, Save, Plus, ArrowLeft } from "lucide-react";
+import { CalendarIcon, Download, Save, Plus, ArrowLeft, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ProposalServiceRow from "@/components/ProposalServiceRow";
 import ProposalPreview from "@/components/ProposalPreview";
@@ -53,21 +53,40 @@ const tagOptions = [
   "Maintenance",
 ];
 
+// Currency options
+const currencyOptions = [
+  { value: "USD", label: "$ (USD)" },
+  { value: "EUR", label: "€ (EUR)" },
+  { value: "INR", label: "₹ (INR)" },
+  { value: "GBP", label: "£ (GBP)" },
+];
+
+// Email template options
+const emailTemplateOptions = [
+  { value: "standard", label: "Standard Proposal" },
+  { value: "detailed", label: "Detailed Breakdown" },
+  { value: "summary", label: "Brief Summary" },
+  { value: "formal", label: "Formal Business Proposal" },
+];
+
 const CreateProposal = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState("standard");
 
   // Initialize form data
   const [formData, setFormData] = useState<ProposalFormData>({
     clientName: "",
+    clientEmail: "",
     services: [],
     startDate: null,
     endDate: null,
     notes: "",
     tags: [],
+    currency: "USD",
   });
 
   // Load existing proposal if in edit mode
@@ -82,11 +101,13 @@ const CreateProposal = () => {
         if (proposal) {
           setFormData({
             clientName: proposal.clientName,
+            clientEmail: proposal.clientEmail || "",
             services: proposal.services,
             startDate: proposal.startDate ? new Date(proposal.startDate) : null,
             endDate: proposal.endDate ? new Date(proposal.endDate) : null,
             notes: proposal.notes,
             tags: proposal.tags,
+            currency: proposal.currency || "USD",
           });
           setIsEdit(true);
         } else {
@@ -158,6 +179,17 @@ const CreateProposal = () => {
     }
   };
 
+  // Handle sending email
+  const handleSendEmail = () => {
+    if (!formData.clientEmail) {
+      alert("Please enter a client email address");
+      return;
+    }
+    
+    alert(`Email would be sent to ${formData.clientEmail} using the ${selectedTemplate} template`);
+    // In a real implementation, you would call an API to send the email
+  };
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,6 +197,12 @@ const CreateProposal = () => {
     if (!formData.clientName.trim()) {
       // Show validation error
       alert("Client name is required");
+      return;
+    }
+
+    if (!formData.clientEmail.trim()) {
+      // Show validation error
+      alert("Client email is required");
       return;
     }
 
@@ -186,8 +224,18 @@ const CreateProposal = () => {
     }
   };
 
+  const getCurrencySymbol = (currencyCode: string) => {
+    switch (currencyCode) {
+      case "USD": return "$";
+      case "EUR": return "€";
+      case "INR": return "₹";
+      case "GBP": return "£";
+      default: return "$";
+    }
+  };
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <header className="bg-muted/30 py-4 px-4 border-b">
         <div className="container max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
@@ -201,6 +249,27 @@ const CreateProposal = () => {
               </h1>
             </div>
             <div className="flex space-x-2">
+              <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Email Template" />
+                </SelectTrigger>
+                <SelectContent>
+                  {emailTemplateOptions.map(template => (
+                    <SelectItem key={template.value} value={template.value}>
+                      {template.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleSendEmail}
+                disabled={!formData.clientEmail}
+              >
+                <Mail className="mr-2 h-4 w-4" />
+                Send Email
+              </Button>
               <Button variant="outline" size="sm" disabled={saving}>
                 <Download className="mr-2 h-4 w-4" />
                 Export PDF
@@ -219,7 +288,7 @@ const CreateProposal = () => {
           <div className="animate-pulse">Loading proposal data...</div>
         </div>
       ) : (
-        <div className="flex flex-col md:flex-row h-[calc(100vh-73px)]">
+        <div className="flex flex-col md:flex-row flex-1">
           {/* Form Panel */}
           <div className="flex-1 overflow-auto border-r">
             <div className="container max-w-2xl mx-auto py-6 px-4">
@@ -227,15 +296,28 @@ const CreateProposal = () => {
                 {/* Client Information */}
                 <div className="space-y-4">
                   <h2 className="text-lg font-semibold">Client Information</h2>
-                  <div className="space-y-2">
-                    <Label htmlFor="clientName">Client Name</Label>
-                    <Input
-                      id="clientName"
-                      placeholder="Enter client name"
-                      value={formData.clientName}
-                      onChange={(e) => handleInputChange("clientName", e.target.value)}
-                      required
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="clientName">Client Name</Label>
+                      <Input
+                        id="clientName"
+                        placeholder="Enter client name"
+                        value={formData.clientName}
+                        onChange={(e) => handleInputChange("clientName", e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="clientEmail">Client Email</Label>
+                      <Input
+                        id="clientEmail"
+                        type="email"
+                        placeholder="Enter client email"
+                        value={formData.clientEmail}
+                        onChange={(e) => handleInputChange("clientEmail", e.target.value)}
+                        required
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -245,7 +327,22 @@ const CreateProposal = () => {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <h2 className="text-lg font-semibold">Services & Pricing</h2>
-                    <div className="flex space-x-2">
+                    <div className="flex space-x-2 items-center">
+                      <Select 
+                        value={formData.currency}
+                        onValueChange={(value) => handleInputChange("currency", value)}
+                      >
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue placeholder="Currency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {currencyOptions.map(currency => (
+                            <SelectItem key={currency.value} value={currency.value}>
+                              {currency.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <Select onValueChange={handleAddService}>
                         <SelectTrigger className="w-[180px]">
                           <SelectValue placeholder="Add Service" />
@@ -291,10 +388,11 @@ const CreateProposal = () => {
                           service={service}
                           onChange={handleServiceChange}
                           onDelete={() => handleServiceDelete(service.id)}
+                          currencySymbol={getCurrencySymbol(formData.currency)}
                         />
                       ))}
                       <div className="text-right pt-2 font-semibold">
-                        Total: $
+                        Total: {getCurrencySymbol(formData.currency)}
                         {formData.services
                           .reduce(
                             (sum, service) => sum + service.unitPrice * service.quantity,
@@ -424,6 +522,13 @@ const CreateProposal = () => {
           </div>
         </div>
       )}
+
+      {/* Contact Footer */}
+      <footer className="bg-muted/30 py-4 px-4 border-t mt-auto">
+        <div className="container mx-auto text-center text-sm text-muted-foreground">
+          <p>For inquiries, contact us at: <a href="mailto:contact@proposalbuilder.com" className="text-primary hover:underline">contact@proposalbuilder.com</a></p>
+        </div>
+      </footer>
     </div>
   );
 };
