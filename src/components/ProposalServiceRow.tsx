@@ -8,9 +8,10 @@ interface ProposalServiceRowProps {
   service: ServiceItem;
   onChange: (service: ServiceItem) => void;
   onDelete: () => void;
+  currencySymbol?: string;
 }
 
-const ProposalServiceRow = ({ service, onChange, onDelete }: ProposalServiceRowProps) => {
+const ProposalServiceRow = ({ service, onChange, onDelete, currencySymbol = "$" }: ProposalServiceRowProps) => {
   const handleChange = (field: keyof ServiceItem, value: string | number) => {
     onChange({
       ...service,
@@ -50,7 +51,7 @@ const ProposalServiceRow = ({ service, onChange, onDelete }: ProposalServiceRowP
         />
       </div>
       <div className="col-span-2 text-right font-medium">
-        ${total.toFixed(2)}
+        {currencySymbol}{total.toFixed(2)}
       </div>
       <div className="col-span-1">
         <Button 
