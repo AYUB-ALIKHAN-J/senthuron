@@ -8,15 +8,19 @@ interface EmailWrapperProps {
 }
 
 const EmailWrapper: React.FC<EmailWrapperProps> = ({ proposal }) => {
-  // Create a processed copy of the proposal to add the needed classes
+  // Create a processed copy of the proposal to ensure emails are properly clickable
   const processedProposal = {
     ...proposal,
-    clientEmail: proposal.clientEmail 
-      ? `<span class="client-email">${proposal.clientEmail}</span>` 
-      : undefined
+    // We don't need special handling here anymore as we've updated the ProposalPreview component
+    // to handle emails directly with proper links
   };
   
-  return <ProposalPreview proposal={processedProposal} />;
+  return (
+    <ProposalPreview 
+      proposal={processedProposal} 
+      template={proposal.preferredTemplate || 'standard'}
+    />
+  );
 };
 
 export default EmailWrapper;
