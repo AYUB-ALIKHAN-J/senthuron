@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Proposal } from '@/types/proposal';
+import ProposalPreview from './ProposalPreview';
 
 interface EmailWrapperProps {
   proposal: Partial<Proposal>;
@@ -15,7 +16,7 @@ const EmailWrapper: React.FC<EmailWrapperProps> = ({ proposal }) => {
       : undefined
   };
   
-  return <div>{JSON.stringify(processedProposal)}</div>;
+  return <ProposalPreview proposal={processedProposal} />;
 };
 
 export default EmailWrapper;
