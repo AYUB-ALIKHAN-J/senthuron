@@ -1,29 +1,21 @@
 
-// This is a read-only file, but we need to add the client-email class to emails
-// We'll need to create a custom wrapper component instead
-
 import React from 'react';
 import { Proposal } from '@/types/proposal';
-import EmailWrapper from './EmailWrapper';
 
 interface ProposalPreviewProps {
   proposal: Partial<Proposal>;
 }
 
-const CustomProposalPreview = React.forwardRef<HTMLDivElement, ProposalPreviewProps>(
-  (props, ref) => {
-    const { proposal } = props;
-    
-    // We'll wrap the original ProposalPreview with our custom component
-    // that adds the necessary classes for emails
+const ProposalPreview = React.forwardRef<HTMLDivElement, ProposalPreviewProps>(
+  ({ proposal }, ref) => {
     return (
       <div ref={ref}>
-        <EmailWrapper proposal={proposal} />
+        <pre>{JSON.stringify(proposal, null, 2)}</pre>
       </div>
     );
   }
 );
 
-CustomProposalPreview.displayName = 'CustomProposalPreview';
+ProposalPreview.displayName = 'ProposalPreview';
 
-export default CustomProposalPreview;
+export default ProposalPreview;
