@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
@@ -52,7 +51,6 @@ import { cn } from "@/lib/utils";
 import DraggableServiceList from "@/components/DraggableServiceList";
 import ProposalServiceRow from "@/components/ProposalServiceRow";
 import ProposalPreview from "@/components/ProposalPreview";
-import ThemeToggle from "@/components/ThemeToggle";
 
 const serviceOptions = [
   "Web Development",
@@ -384,7 +382,6 @@ const CreateProposal = () => {
                 <h1 className="text-lg font-semibold mr-2">
                   {isEdit ? "Edit Proposal" : "New Proposal"}
                 </h1>
-                <ThemeToggle />
                 <Sheet>
                   <SheetTrigger asChild>
                     <Button variant="outline" size="icon" className="ml-2">
@@ -462,7 +459,6 @@ const CreateProposal = () => {
             
             {!isMobile && (
               <div className="flex space-x-2 items-center">
-                <ThemeToggle />
                 <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Email Template" />
