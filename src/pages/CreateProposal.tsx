@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
@@ -41,7 +42,11 @@ import {
   Tag, 
   X,
   Eye,
-  Menu
+  Menu,
+  Phone,
+  Building,
+  FileText,
+  Info
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DraggableServiceList from "@/components/DraggableServiceList";
@@ -111,10 +116,14 @@ const CreateProposal = () => {
   const [formData, setFormData] = useState<ProposalFormData>({
     clientName: "",
     clientEmail: "",
+    clientPhone: "",
+    companyName: "",
     services: [],
     startDate: null,
     endDate: null,
     notes: "",
+    executiveSummary: "",
+    standardTerms: "50% deposit required to begin work\nRemaining balance due upon project completion\nTwo rounds of revisions included\nAdditional revisions billed at hourly rate",
     tags: [],
     currency: "USD",
     preferredTemplate: "standard"
@@ -132,10 +141,14 @@ const CreateProposal = () => {
           setFormData({
             clientName: proposal.clientName,
             clientEmail: proposal.clientEmail || "",
+            clientPhone: proposal.clientPhone || "",
+            companyName: proposal.companyName || "",
             services: proposal.services,
             startDate: proposal.startDate ? new Date(proposal.startDate) : null,
             endDate: proposal.endDate ? new Date(proposal.endDate) : null,
             notes: proposal.notes,
+            executiveSummary: proposal.executiveSummary || "",
+            standardTerms: proposal.standardTerms || "50% deposit required to begin work\nRemaining balance due upon project completion\nTwo rounds of revisions included\nAdditional revisions billed at hourly rate",
             tags: proposal.tags,
             currency: proposal.currency || "USD",
             preferredTemplate: proposal.preferredTemplate || "standard"
@@ -506,7 +519,7 @@ const CreateProposal = () => {
               <form id="proposal-form" onSubmit={handleSubmit} className="space-y-8">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center flex-wrap gap-4">
-                    <h2 className="text-lg font-semibold">Client Information</h2>
+                    <h2 className="text-lg font-semibold">Company & Client Information</h2>
                     <div className="space-y-2">
                       <Label htmlFor="proposalDate">Proposal Date</Label>
                       <Popover>
@@ -537,28 +550,79 @@ const CreateProposal = () => {
                       </Popover>
                     </div>
                   </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="companyName">Your Company Name</Label>
+                    <div className="flex items-center gap-2">
+                      <Building className="h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="companyName"
+                        placeholder="Enter your company name"
+                        value={formData.companyName}
+                        onChange={(e) => handleInputChange("companyName", e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="clientName">Client Name</Label>
-                      <Input
-                        id="clientName"
-                        placeholder="Enter client name"
-                        value={formData.clientName}
-                        onChange={(e) => handleInputChange("clientName", e.target.value)}
-                        required
-                      />
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="clientName"
+                          placeholder="Enter client name"
+                          value={formData.clientName}
+                          onChange={(e) => handleInputChange("clientName", e.target.value)}
+                          required
+                        />
+                      </div>
                     </div>
+                    
                     <div className="space-y-2">
                       <Label htmlFor="clientEmail">Client Email</Label>
-                      <Input
-                        id="clientEmail"
-                        type="email"
-                        placeholder="Enter client email"
-                        value={formData.clientEmail}
-                        onChange={(e) => handleInputChange("clientEmail", e.target.value)}
-                        required
-                      />
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="clientEmail"
+                          type="email"
+                          placeholder="Enter client email"
+                          value={formData.clientEmail}
+                          onChange={(e) => handleInputChange("clientEmail", e.target.value)}
+                          required
+                        />
+                      </div>
                     </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="clientPhone">Client Phone</Label>
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="clientPhone"
+                          type="tel"
+                          placeholder="Enter client phone"
+                          value={formData.clientPhone}
+                          onChange={(e) => handleInputChange("clientPhone", e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <h2 className="text-lg font-semibold">Executive Summary</h2>
+                  <div className="space-y-2">
+                    <Label htmlFor="executiveSummary">Summary</Label>
+                    <Textarea
+                      id="executiveSummary"
+                      placeholder="Thank you for considering our services. This proposal outlines our recommended approach for your project, including scope of work, pricing, and timeline."
+                      value={formData.executiveSummary}
+                      onChange={(e) => handleInputChange("executiveSummary", e.target.value)}
+                      rows={4}
+                    />
                   </div>
                 </div>
 
@@ -790,16 +854,30 @@ const CreateProposal = () => {
                 <Separator />
 
                 <div className="space-y-4">
-                  <h2 className="text-lg font-semibold">Notes</h2>
+                  <h2 className="text-lg font-semibold">Notes & Terms</h2>
                   <div className="space-y-2">
                     <Label htmlFor="notes">Additional Notes</Label>
                     <Textarea
                       id="notes"
-                      placeholder="Enter any additional notes or terms for this proposal"
+                      placeholder="Enter any additional notes for this proposal"
                       value={formData.notes}
                       onChange={(e) => handleInputChange("notes", e.target.value)}
                       rows={5}
                     />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="standardTerms">Standard Terms</Label>
+                    <Textarea
+                      id="standardTerms"
+                      placeholder="Enter standard terms and conditions"
+                      value={formData.standardTerms}
+                      onChange={(e) => handleInputChange("standardTerms", e.target.value)}
+                      rows={4}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Standard terms will appear at the bottom of your proposal unless they are already included in your notes.
+                    </p>
                   </div>
                 </div>
               </form>

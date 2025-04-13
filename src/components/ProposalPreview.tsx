@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Calendar, Tag, Info, Mail, Phone } from 'lucide-react';
+import { FileText, Calendar, Tag, Info, Mail, Phone, Building } from 'lucide-react';
 
 interface ProposalPreviewProps {
   proposal: Partial<Proposal>;
@@ -91,7 +91,7 @@ const ProposalPreview = React.forwardRef<HTMLDivElement, ProposalPreviewProps>(
                     ? 'Marketing Strategy Proposal'
                     : 'Business Proposal'}
                 </h1>
-                <p className="opacity-90">Your Company Name</p>
+                <p className="opacity-90">{proposal.companyName || 'Your Company Name'}</p>
                 <p className="mt-1 text-sm opacity-80">Proposal #{proposalId}</p>
               </div>
               <div className="text-right">
@@ -99,15 +99,6 @@ const ProposalPreview = React.forwardRef<HTMLDivElement, ProposalPreviewProps>(
                   <div className="mb-2 flex items-center justify-end gap-2">
                     <Calendar className="h-4 w-4" />
                     <span>{format(new Date(proposal.createdAt), 'PPP')}</span>
-                  </div>
-                )}
-                {proposal.tags && proposal.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 justify-end mt-4">
-                    {proposal.tags.map((tag) => (
-                      <span key={tag} className="proposal-tag inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/20 text-white">
-                        {tag}
-                      </span>
-                    ))}
                   </div>
                 )}
               </div>
@@ -123,18 +114,27 @@ const ProposalPreview = React.forwardRef<HTMLDivElement, ProposalPreviewProps>(
               </h2>
               <div className={`${styles.accentBg} p-4 rounded-md border ${styles.borderColor}`}>
                 <p className="font-semibold text-lg">{proposal.clientName}</p>
-                {proposal.clientEmail && (
-                  <p className="client-email mt-2 flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <a href={`mailto:${proposal.clientEmail}`} className="text-primary hover:underline">
-                      {proposal.clientEmail}
-                    </a>
-                  </p>
-                )}
-                <p className="mt-2 flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Not provided</span>
-                </p>
+                <div className="mt-2 flex flex-col gap-2">
+                  {proposal.clientEmail && (
+                    <p className="client-email flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <a href={`mailto:${proposal.clientEmail}`} className="text-primary hover:underline">
+                        {proposal.clientEmail}
+                      </a>
+                    </p>
+                  )}
+                  {proposal.clientPhone ? (
+                    <p className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{proposal.clientPhone}</span>
+                    </p>
+                  ) : (
+                    <p className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">Not provided</span>
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -145,14 +145,20 @@ const ProposalPreview = React.forwardRef<HTMLDivElement, ProposalPreviewProps>(
                 Executive Summary
               </h2>
               <div className="prose max-w-none">
-                <p>
-                  Thank you for considering our services. This proposal outlines our recommended approach
-                  for your project, including scope of work, pricing, and timeline.
-                </p>
-                <p className="mt-2">
-                  Our team specializes in delivering high-quality solutions tailored to your specific needs,
-                  ensuring that we meet and exceed your expectations.
-                </p>
+                {proposal.executiveSummary ? (
+                  <div className="whitespace-pre-wrap">{proposal.executiveSummary}</div>
+                ) : (
+                  <>
+                    <p>
+                      Thank you for considering our services. This proposal outlines our recommended approach
+                      for your project, including scope of work, pricing, and timeline.
+                    </p>
+                    <p className="mt-2">
+                      Our team specializes in delivering high-quality solutions tailored to your specific needs,
+                      ensuring that we meet and exceed your expectations.
+                    </p>
+                  </>
+                )}
               </div>
             </div>
 
@@ -256,7 +262,12 @@ const ProposalPreview = React.forwardRef<HTMLDivElement, ProposalPreviewProps>(
                 <div className={`${styles.accentBg} p-4 rounded-md border ${styles.borderColor} whitespace-pre-wrap`}>
                   {proposal.notes}
                   
-                  {!proposal.notes.includes("Terms") && (
+                  {!proposal.notes.includes("Terms") && proposal.standardTerms ? (
+                    <div className="mt-4 pt-4 border-t border-dashed border-muted">
+                      <p className="font-medium">Standard Terms:</p>
+                      <div className="whitespace-pre-wrap mt-2 text-sm">{proposal.standardTerms}</div>
+                    </div>
+                  ) : !proposal.notes.includes("Terms") && !proposal.standardTerms && (
                     <div className="mt-4 pt-4 border-t border-dashed border-muted">
                       <p className="font-medium">Standard Terms:</p>
                       <ul className="list-disc pl-5 mt-2 text-sm text-muted-foreground">
@@ -271,14 +282,31 @@ const ProposalPreview = React.forwardRef<HTMLDivElement, ProposalPreviewProps>(
               </div>
             )}
 
+            {/* Tags */}
+            {proposal.tags && proposal.tags.length > 0 && (
+              <div className="mb-8">
+                <h2 className={`text-xl font-semibold mb-4 flex items-center gap-2 ${styles.accentColor}`}>
+                  <Tag className="h-5 w-5" />
+                  Categories
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {proposal.tags.map((tag) => (
+                    <span key={tag} className="proposal-tag inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Footer */}
             <Separator className="my-8" />
             <div className="text-center">
               <p className="text-muted-foreground">Thank you for considering our services!</p>
               <p className="mt-1">
                 For any questions, please contact us at: 
-                <a href="mailto:contact@proposalbuilder.com" className="text-primary hover:underline ml-1">
-                  contact@proposalbuilder.com
+                <a href={`mailto:${proposal.companyName ? `contact@${proposal.companyName.toLowerCase().replace(/\s+/g, '')}.com` : 'contact@proposalbuilder.com'}`} className="text-primary hover:underline ml-1">
+                  {proposal.companyName ? `contact@${proposal.companyName.toLowerCase().replace(/\s+/g, '')}.com` : 'contact@proposalbuilder.com'}
                 </a>
               </p>
             </div>
